@@ -52,7 +52,20 @@ MBGAP uses **two Conda environments**:
 
 You can use different names for the environments — just provide them via `--conda-env` and `--gtdbtk-env`.
 
-**Suggested installation of the main environment** (adjust as needed):
+#### Option 1 — Automated setup (recommended)
+
+The easiest way to create both environments is to use the companion repository **[nascimento-jean/Criacao_Env_Bioinfo](https://github.com/nascimento-jean/Criacao_Env_Bioinfo)**, which provides ready-to-use Conda environment files and step-by-step instructions for setting up everything required to run MBGAP.
+
+```bash
+git clone https://github.com/nascimento-jean/Criacao_Env_Bioinfo.git
+cd Criacao_Env_Bioinfo
+# Follow the instructions in the repository README
+```
+
+#### Option 2 — Manual installation
+
+If you prefer to set up the environments manually (adjust as needed):
+
 ```bash
 conda create -n bioinfo -c conda-forge -c bioconda \
   fastqc trimmomatic spades shovill unicycler quast \
@@ -111,7 +124,7 @@ bash MBGAP_v3_0.sh \
 
 **Option B — CSV Samplesheet (recommended for multiple samples with metadata)**
 
-Create a CSV file with information for each sample:
+The samplesheet is a CSV file with information for each sample. It must follow this format:
 
 ```csv
 sample,r1,r2,genus,species,gram,gsize
@@ -123,6 +136,14 @@ ISO003,/data/ISO003_R1.fastq.gz,/data/ISO003_R2.fastq.gz,,,,4.9M
 > **Required fields:** `sample`, `r1`, `r2`  
 > **Optional fields:** `genus`, `species`, `gram` (`+`, `-`, or `?`), `gsize` (required for Shovill)  
 > Leave optional fields blank when unknown — GAMBIT can automatically infer taxonomy.
+
+**Don't want to build the samplesheet from scratch?** This repository includes the helper script `create_samplesheet.py`, which can generate the CSV automatically from a directory of FASTQ files:
+
+```bash
+python3 create_samplesheet.py --input /path/to/fastqs/ --output samples.csv
+```
+
+Review and fill in any optional metadata columns (genus, species, gram, gsize) before running the pipeline.
 
 ```bash
 bash MBGAP_v3_0.sh \
