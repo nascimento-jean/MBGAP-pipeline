@@ -154,8 +154,6 @@ Regras:
 EOF
 }
 
-echo
-
 # =========================
 # LOG / UTILS
 # =========================
@@ -231,7 +229,6 @@ safe_sample_name() {
     [[ "$s" =~ ^[A-Za-z0-9._-]+$ ]] || die "Nome de amostra inválido: '$s'. Use apenas letras, números, ponto, underscore e hífen."
 }
 
-echo
 
 # =========================
 # CHECKPOINT
@@ -261,7 +258,6 @@ run_step() {
 
 trap 'die "Pipeline interrompido por erro."' ERR
 
-echo
 
 # =========================
 # ARG PARSING
@@ -312,7 +308,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo
 
 # =========================
 # GLOBAL THREAD OVERRIDE
@@ -330,7 +325,6 @@ if [[ -n "$THREADS_DEFAULT" ]]; then
     THREADS_GTDBTK="$THREADS_DEFAULT"
 fi
 
-echo
 
 # =========================
 # VALIDATION
@@ -380,7 +374,6 @@ LOG_FILE="$OUTPUT_DIR/pipeline_log.txt"
 CHECKPOINT_DIR="$OUTPUT_DIR/.checkpoints"
 mkdir -p "$CHECKPOINT_DIR"
 
-echo
 
 # =========================
 # CONDA
@@ -414,7 +407,6 @@ if [[ "$RUN_GAMBIT" == "yes" ]]; then
     check_command gambit
 fi
 
-echo
 
 # =========================
 # SUMMARY
@@ -437,7 +429,7 @@ log "Bakta DB: $BAKTA_DB"
 log "PlasmidFinder DB: $PLASMIDFINDER_DB"
 [[ "$ASSEMBLER" == "shovill" ]] && log "Shovill gsize global: ${SHOVILL_GSIZE_DEFAULT:-NA}"
 
-echo
+
 
 # =========================
 # FUNCTIONS
@@ -563,7 +555,7 @@ PY
     [[ "${#SAMPLE_ORDER[@]}" -gt 0 ]] || die "Nenhuma amostra válida foi carregada do samplesheet"
 }
 
-echo
+
 
 discover_samples_from_input() {
     local found=0
@@ -592,7 +584,7 @@ discover_samples_from_input() {
     [[ "$found" -eq 1 ]] || die "Nenhuma amostra paired-end válida encontrada em $INPUT_DIR"
 }
 
-echo
+
 
 validate_shovill_gsizes() {
     local sample gsize
@@ -613,17 +605,20 @@ validate_shovill_gsizes() {
     done
 }
 
-echo
+
 
 run_fastqc() {
     local outdir="$1"
     local r1="$2"
     local r2="$3"
+
+    echo
+
     log "FastQC: $(basename "$r1"), $(basename "$r2")"
     fastqc -t "$THREADS_FASTQC" -o "$outdir" "$r1" "$r2"
 }
 
-echo
+
 
 run_trimmomatic() {
     local r1="$1"
@@ -633,6 +628,8 @@ run_trimmomatic() {
     local p2="$5"
     local u2="$6"
     local summary="$7"
+
+    echo
 
     log "Trimmomatic: $(basename "$r1")"
     _JAVA_OPTIONS="-Xmx32g" trimmomatic PE -phred33 \
@@ -645,12 +642,14 @@ run_trimmomatic() {
         -summary "$summary"
 }
 
-echo
+
 
 run_spades() {
     local r1="$1"
     local r2="$2"
     local outdir="$3"
+
+    echo
 
     log "SPAdes"
     spades.py \
@@ -664,7 +663,7 @@ run_spades() {
         -k 21,33,55,77,99,127
 }
 
-echo
+
 
 run_shovill() {
     local r1="$1"
@@ -673,7 +672,11 @@ run_shovill() {
     local sample="$4"
     local gsize="$5"
 
+    echo
+
     [[ -n "$gsize" ]] || die "gsize ausente para amostra '$sample' usando Shovill"
+
+    echo
 
     log "Shovill"
     shovill \
@@ -694,12 +697,13 @@ run_shovill() {
 }
 
 
-echo
 
 run_unicycler() {
     local r1="$1"
     local r2="$2"
     local outdir="$3"
+
+    echo
 
     log "Unicycler"
     unicycler \
@@ -712,7 +716,7 @@ run_unicycler() {
         --mode normal
 }
 
-echo
+
 
 rename_and_copy_assembly() {
     local assembler="$1"
@@ -750,15 +754,19 @@ make_prokka_fasta() {
         'BEGIN{n=0} /^>/{n++; printf ">%s_contig_%05d\n", prefix, n; next} {print}' \
         "$fasta" > "$fasta_clean"
 
+    echo
+
     log "Prokka: contigs renomeados em $(basename "$fasta_clean") (IDs ≤37 chars)" >&2 || true
     echo "$fasta_clean"
 }
 
-echo
+
 
 run_quast() {
     local sample="$1"
     local sample_dir="$2"
+
+    echo
 
     quast.py \
         "$OUTPUT_DIR/Assembly_final/${sample}_${ASSEMBLER}.fasta" \
@@ -769,11 +777,13 @@ run_quast() {
         --threads "$THREADS_QUAST"
 }
 
-echo
+
 
 run_assembly_scan() {
     local sample="$1"
     local sample_dir="$2"
+
+    echo
 
     bash -c "assembly-scan \
         '$OUTPUT_DIR/Assembly_final/${sample}_${ASSEMBLER}.fasta' \
@@ -781,7 +791,7 @@ run_assembly_scan() {
         > '$sample_dir/${sample}_${ASSEMBLER}.tsv'"
 }
 
-echo
+
 
 run_prokka() {
     local fasta="$1"
@@ -813,15 +823,18 @@ run_prokka() {
         cmd+=(--species "$sample_species")
     fi
 
+    echo
+
     log "Prokka | sample=$sample | genus=${sample_genus:-NA} | species=${sample_species:-NA}"
     "${cmd[@]}" "$fasta_clean"
 
     echo
+
     rm -f "$fasta_clean"
     log "Prokka: FASTA temporário removido"
 }
 
-echo
+
 
 run_bakta() {
     local fasta="$1"
@@ -846,15 +859,19 @@ run_bakta() {
     [[ -n "$sample_species" ]] && cmd+=(--species "$sample_species")
     [[ "$BAKTA_COMPLETE" == "yes" ]] && cmd+=(--complete)
 
+    echo
+
     log "Bakta | sample=$sample | genus=${sample_genus:-NA} | species=${sample_species:-NA} | gram=${sample_gram:-NA}"
     "${cmd[@]}" "$fasta"
 }
 
-echo
+
 
 run_amrfinder() {
     local sample="$1"
     local sample_dir="$2"
+
+    echo
 
     amrfinder \
         --nucleotide "$OUTPUT_DIR/Assembly_final/${sample}_${ASSEMBLER}.fasta" \
@@ -865,11 +882,13 @@ run_amrfinder() {
         --coverage_min 0.75
 }
 
-echo
+
 
 run_plasmidfinder() {
     local sample="$1"
     local sample_dir="$2"
+
+    echo
 
     plasmidfinder.py \
         -i "$OUTPUT_DIR/Assembly_final/${sample}_${ASSEMBLER}.fasta" \
@@ -878,7 +897,7 @@ run_plasmidfinder() {
         -mp blastn
 }
 
-echo
+
 
 run_pre_annotation_sample_pipeline() {
     local assembler="$1"
@@ -888,6 +907,7 @@ run_pre_annotation_sample_pipeline() {
     local sample="$5"
     local sample_gsize="$6"
 
+    echo
     create_directory "$sample_dir"
     create_directory "$sample_dir/${sample}_fastqc"
 
@@ -942,7 +962,7 @@ run_pre_annotation_sample_pipeline() {
         run_assembly_scan "$sample" "$sample_dir"
 }
 
-echo
+
 
 infer_taxonomy_from_predicted_name() {
     local predicted="$1"
@@ -971,7 +991,7 @@ infer_taxonomy_from_predicted_name() {
     '
 }
 
-echo
+
 
 infer_taxonomy_for_sample_from_gambit() {
     local sample="$1"
@@ -979,6 +999,7 @@ infer_taxonomy_for_sample_from_gambit() {
 
     [[ -f "$gambit_csv" ]] || return 0
 
+    echo
     python3 - "$gambit_csv" "$sample" "$ASSEMBLER" <<'PY'
 import csv
 import os
@@ -1015,7 +1036,7 @@ with open(gambit_csv, newline="", encoding="utf-8-sig") as fh:
 PY
 }
 
-echo
+
 
 resolve_taxonomy_for_sample() {
     local sample="$1"
@@ -1075,7 +1096,7 @@ resolve_taxonomy_for_sample() {
     SAMPLE_SPECIES_SOURCE["$sample"]="${species_source:-NA}"
 }
 
-echo
+
 
 write_taxonomy_resolution_table() {
     local outfile="$OUTPUT_DIR/sample_taxonomy_resolution.tsv"
@@ -1085,10 +1106,12 @@ write_taxonomy_resolution_table() {
             echo -e "${sample}\t${SAMPLE_GENUS[$sample]:-}\t${SAMPLE_SPECIES[$sample]:-}\t${SAMPLE_GRAMPHENO[$sample]:-}\t${SAMPLE_FINAL_GENUS[$sample]:-}\t${SAMPLE_FINAL_SPECIES[$sample]:-}\t${SAMPLE_GENUS_SOURCE[$sample]:-NA}\t${SAMPLE_SPECIES_SOURCE[$sample]:-NA}"
         done
     } > "$outfile"
+
+    echo
     log "Resumo taxonômico salvo em: $outfile"
 }
 
-echo
+
 
 run_annotation_steps_for_sample() {
     local sample="$1"
@@ -1120,9 +1143,11 @@ run_annotation_steps_for_sample() {
         run_plasmidfinder "$sample" "$sample_dir"
 }
 
-echo
+
 
 run_gambit_on_assemblies() {
+
+    echo
     gambit -d "$GAMBIT_DB" query \
         -o "$OUTPUT_DIR/taxonomic_identification_gambit.tsv" \
         "$OUTPUT_DIR/Assembly_final/"*.fasta
@@ -1132,6 +1157,8 @@ echo
 
 run_multiqc() {
     if [[ "$TRIM" == "yes" ]]; then
+
+    echo
         multiqc -o "$OUTPUT_DIR/multiqc_output" \
             "$OUTPUT_DIR"/*/*_fastqc \
             "$OUTPUT_DIR"/*/*_fastqc_trimmed
@@ -1144,6 +1171,8 @@ run_multiqc() {
 echo
 
 run_gtdbtk() {
+
+    echo
     log "Trocando para ambiente GTDB-Tk: $GTDBTK_ENV"
     conda deactivate || true
     eval "$(conda shell.bash hook)" || die "Falha ao reinicializar o conda shell hook"
@@ -1154,6 +1183,7 @@ run_gtdbtk() {
     local gtdbtk_scratch="$OUTPUT_DIR/.gtdbtk_scratch"
     mkdir -p "$gtdbtk_scratch"
 
+    echo
     log "GTDB-Tk"
     gtdbtk classify_wf \
         --skip_ani_screen \
@@ -1171,7 +1201,7 @@ run_gtdbtk() {
     conda activate "$CONDA_ENV" || die "Não foi possível reativar o ambiente conda principal: $CONDA_ENV"
 }
 
-echo
+
 
 # =========================
 # SAMPLE LOADING
@@ -1183,9 +1213,9 @@ else
 fi
 
 validate_shovill_gsizes
+
 log "Total de amostras carregadas: ${#SAMPLE_ORDER[@]}"
 
-echo
 
 # =========================
 # PHASE 1: QC + ASSEMBLY + QUAST + ASSEMBLY-SCAN
@@ -1202,39 +1232,47 @@ for sample in "${SAMPLE_ORDER[@]}"; do
         "${SAMPLE_GSIZE[$sample]}"
 done
 
-echo
+
 
 # =========================
 # PHASE 2: GAMBIT + RESOLUÇÃO TAXONÔMICA
 # =========================
+
+echo
 if [[ "$RUN_GAMBIT" == "yes" ]]; then
     run_step "global_gambit" "Gambit" run_gambit_on_assemblies
 else
     log "Gambit desabilitado: inferência de genus/species não será executada"
 fi
 
+echo
 for sample in "${SAMPLE_ORDER[@]}"; do
     resolve_taxonomy_for_sample "$sample"
     log "Taxonomia final | $sample | genus=${SAMPLE_FINAL_GENUS[$sample]:-NA} (${SAMPLE_GENUS_SOURCE[$sample]:-NA}) | species=${SAMPLE_FINAL_SPECIES[$sample]:-NA} (${SAMPLE_SPECIES_SOURCE[$sample]:-NA}) | gram=${SAMPLE_GRAMPHENO[$sample]:-NA}"
 done
 
+echo
 run_step "global_taxonomy_resolution" "Gerar tabela de resolução taxonômica" write_taxonomy_resolution_table
 
-echo
+
 
 # =========================
 # PHASE 3: ANNOTATION + AMR + PLASMIDS
 # =========================
+
+echo
 for sample in "${SAMPLE_ORDER[@]}"; do
     log "Processando amostra (fase 3): $sample"
     run_annotation_steps_for_sample "$sample"
 done
 
-echo
+
 
 # =========================
 # POST-PROCESSING
 # =========================
+
+echo
 if [[ "$RUN_MULTIQC" == "yes" ]]; then
     run_step "global_multiqc" "MultiQC" run_multiqc
 fi
