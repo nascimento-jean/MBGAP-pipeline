@@ -1,274 +1,270 @@
 # MBGAP — Mykaella's Bacterial Genome Analysis Pipeline
 
-**Versão 3.0**  
-Desenvolvido por **Jean Phellipe Marques do Nascimento**  
+**Version 3.0**  
+Developed by **Jean Phellipe Marques do Nascimento**  
 Laboratório de Vigilância Genômica — LACEN-AL
 
 ---
 
-## O que é o MBGAP?
+## What is MBGAP?
 
-O MBGAP é uma pipeline automatizada para análise de genomas bacterianos a partir de dados de sequenciamento de nova geração (NGS) no formato **paired-end Illumina**. Com um único comando, ele executa de forma integrada:
+MBGAP is an automated pipeline for bacterial genome analysis from Illumina **paired-end** next-generation sequencing (NGS) data. With a single command, it runs the following steps in an integrated manner:
 
-1. **Controle de qualidade** das reads brutas (FastQC)
-2. **Trimagem** de adaptadores e baixa qualidade (Trimmomatic) — opcional
-3. **Montagem** do genoma (*assembly*) — SPAdes, Shovill ou Unicycler
-4. **Avaliação da montagem** (QUAST + Assembly-scan)
-5. **Identificação taxonômica** (GAMBIT e/ou GTDB-Tk)
-6. **Anotação genômica** (Prokka + Bakta)
-7. **Detecção de genes de resistência antimicrobiana** (AMRFinder)
-8. **Identificação de plasmídeos** (PlasmidFinder)
-9. **Relatório consolidado de qualidade** (MultiQC)
+1. **Raw read quality control** (FastQC)
+2. **Adapter and quality trimming** (Trimmomatic) — optional
+3. **Genome assembly** — SPAdes, Shovill, or Unicycler
+4. **Assembly quality assessment** (QUAST + assembly-scan)
+5. **Taxonomic identification** (GAMBIT and/or GTDB-Tk)
+6. **Genome annotation** (Prokka + Bakta)
+7. **Antimicrobial resistance gene detection** (AMRFinder)
+8. **Plasmid identification** (PlasmidFinder)
+9. **Consolidated quality report** (MultiQC)
 
 ---
 
-## Antes de começar — Pré-requisitos
+## Before You Start — Prerequisites
 
-### Sistema operacional
+### Operating System
 
-O MBGAP foi desenvolvido para rodar em **Linux** (Ubuntu/Debian recomendado). Não é compatível com Windows diretamente (você pode usar WSL2 no Windows, se necessário).
+MBGAP is designed to run on **Linux** (Ubuntu/Debian recommended). It is not directly compatible with Windows (you may use WSL2 on Windows if needed).
 
 ### Conda
 
-Todas as ferramentas são gerenciadas via **Conda**. Se você ainda não tem o Conda instalado:
+All tools are managed via **Conda**. If you do not have Conda installed:
 
-1. Baixe o instalador do Miniconda:
+1. Download the Miniconda installer:
    ```bash
    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
    bash Miniconda3-latest-Linux-x86_64.sh
    ```
-2. Reinicie o terminal ou execute `source ~/.bashrc`.
+2. Restart your terminal or run `source ~/.bashrc`.
 
-### Ambientes Conda necessários
+### Required Conda Environments
 
-O MBGAP utiliza **dois ambientes Conda**:
+MBGAP uses **two Conda environments**:
 
-| Ambiente | Ferramentas incluídas |
+| Environment | Included Tools |
 |---|---|
-| `bioinfo` (padrão) | FastQC, Trimmomatic, SPAdes, Shovill, Unicycler, QUAST, Prokka, Bakta, AMRFinder, PlasmidFinder, GAMBIT, assembly-scan, MultiQC |
-| `gtdbtk` (padrão) | GTDB-Tk |
+| `bioinfo` (default) | FastQC, Trimmomatic, SPAdes, Shovill, Unicycler, QUAST, Prokka, Bakta, AMRFinder, PlasmidFinder, GAMBIT, assembly-scan, MultiQC |
+| `gtdbtk` (default) | GTDB-Tk |
 
-Observação: Para criação dos ambientes Conda necessários, pode ser utilizado o repositório: https://github.com/nascimento-jean/Criacao_Env_Bioinfo
+> GTDB-Tk requires a separate environment due to dependency conflicts with other tools.
 
-> O GTDB-Tk requer um ambiente separado pois possui dependências conflitantes com as demais ferramentas.
+You can use different names for the environments — just provide them via `--conda-env` and `--gtdbtk-env`.
 
-Você pode usar nomes diferentes para os ambientes — basta informá-los com `--conda-env` e `--gtdbtk-env`.
-
-**Sugestão de instalação do ambiente principal** (adapte conforme necessário):
+**Suggested installation of the main environment** (adjust as needed):
 ```bash
 conda create -n bioinfo -c conda-forge -c bioconda \
   fastqc trimmomatic spades shovill unicycler quast \
   prokka bakta amrfinder plasmidfinder gambit assembly-scan multiqc
 ```
 
-### Bancos de dados necessários
+### Required Databases
 
-Você precisa baixar e configurar **três bancos de dados** antes de usar o MBGAP:
+You must download and configure **three databases** before using MBGAP:
 
-| Banco | Ferramenta | Como obter |
+| Database | Tool | How to obtain |
 |---|---|---|
 | GAMBIT DB | GAMBIT | [github.com/jlumpe/gambit](https://github.com/jlumpe/gambit) |
-| Bakta DB | Bakta | `bakta_db download --output /caminho/bakta_db` |
+| Bakta DB | Bakta | `bakta_db download --output /path/to/bakta_db` |
 | PlasmidFinder DB | PlasmidFinder | [bitbucket.org/genomicepidemiology/plasmidfinder_db](https://bitbucket.org/genomicepidemiology/plasmidfinder_db) |
 
 ---
 
-## Instalação do MBGAP
+## Installation
 
-1. Baixe o script:
+1. Clone the repository:
    ```bash
-   # Via git clone
-   git clone https://github.com/SEU_USUARIO/MBGAP.git
+   git clone https://github.com/YOUR_USERNAME/MBGAP.git
    cd MBGAP
    ```
-   Ou faça o download direto do arquivo `MBGAP_v3_0.sh`.
+   Or download the `MBGAP_v3_0.sh` file directly.
 
-2. Torne o script executável:
+2. Make the script executable:
    ```bash
    chmod +x MBGAP_v3_0.sh
    ```
 
-3. Pronto! Não há instalação adicional além dos ambientes Conda descritos acima.
+3. That's it! No additional installation is needed beyond the Conda environments described above.
 
 ---
 
-## Como usar
+## How to Use
 
-### Modos de entrada
+### Input Modes
 
-Você pode fornecer os dados de duas formas:
+You can provide data in two ways:
 
-**Opção A — Pasta com arquivos FASTQ**
+**Option A — Directory of FASTQ files**
 
-Se seus arquivos seguem o padrão `AMOSTRA_R1_001.fastq.gz` / `AMOSTRA_R2_001.fastq.gz` (ou `AMOSTRA_1.fastq.gz` / `AMOSTRA_2.fastq.gz`):
+If your files follow the naming pattern `SAMPLE_R1_001.fastq.gz` / `SAMPLE_R2_001.fastq.gz` (or `SAMPLE_1.fastq.gz` / `SAMPLE_2.fastq.gz`):
 
 ```bash
 bash MBGAP_v3_0.sh \
-  --input /caminho/para/fastqs/ \
-  --output /caminho/para/resultados/ \
+  --input /path/to/fastqs/ \
+  --output /path/to/results/ \
   --assembler spades \
-  --gambit-db /caminho/gambit_db/ \
-  --bakta-db /caminho/bakta_db/ \
-  --plasmidfinder-db /caminho/plasmidfinder_db/
+  --gambit-db /path/to/gambit_db/ \
+  --bakta-db /path/to/bakta_db/ \
+  --plasmidfinder-db /path/to/plasmidfinder_db/
 ```
 
-**Opção B — Samplesheet CSV (recomendado para múltiplas amostras com metadados)**
+**Option B — CSV Samplesheet (recommended for multiple samples with metadata)**
 
-Crie um arquivo CSV com as informações de cada amostra:
+Create a CSV file with information for each sample:
 
 ```csv
 sample,r1,r2,genus,species,gram,gsize
-ISO001,/dados/ISO001_R1.fastq.gz,/dados/ISO001_R2.fastq.gz,Escherichia,coli,-,5.2M
-ISO002,/dados/ISO002_R1.fastq.gz,/dados/ISO002_R2.fastq.gz,Klebsiella,pneumoniae,-,5.5M
-ISO003,/dados/ISO003_R1.fastq.gz,/dados/ISO003_R2.fastq.gz,,,,4.9M
+ISO001,/data/ISO001_R1.fastq.gz,/data/ISO001_R2.fastq.gz,Escherichia,coli,-,5.2M
+ISO002,/data/ISO002_R1.fastq.gz,/data/ISO002_R2.fastq.gz,Klebsiella,pneumoniae,-,5.5M
+ISO003,/data/ISO003_R1.fastq.gz,/data/ISO003_R2.fastq.gz,,,,4.9M
 ```
-Observação: A samplesheet poderá ser criada utilizando o arquivo: create_samplesheet.py
 
-> **Campos obrigatórios:** `sample`, `r1`, `r2`  
-> **Campos opcionais:** `genus`, `species`, `gram` (`+`, `-` ou `?`), `gsize` (necessário para Shovill)  
-> Deixe campos opcionais em branco quando não souber — o GAMBIT pode inferir automaticamente.
+> **Required fields:** `sample`, `r1`, `r2`  
+> **Optional fields:** `genus`, `species`, `gram` (`+`, `-`, or `?`), `gsize` (required for Shovill)  
+> Leave optional fields blank when unknown — GAMBIT can automatically infer taxonomy.
 
 ```bash
 bash MBGAP_v3_0.sh \
-  --samplesheet /caminho/amostras.csv \
-  --output /caminho/para/resultados/ \
+  --samplesheet /path/to/samples.csv \
+  --output /path/to/results/ \
   --assembler spades \
-  --gambit-db /caminho/gambit_db/ \
-  --bakta-db /caminho/bakta_db/ \
-  --plasmidfinder-db /caminho/plasmidfinder_db/
+  --gambit-db /path/to/gambit_db/ \
+  --bakta-db /path/to/bakta_db/ \
+  --plasmidfinder-db /path/to/plasmidfinder_db/
 ```
 
 ---
 
-## Parâmetros completos
+## Full Parameter Reference
 
-### Entrada e saída
+### Input and Output
 
-| Parâmetro | Descrição |
+| Parameter | Description |
 |---|---|
-| `--input DIR` | Pasta contendo arquivos FASTQ paired-end |
-| `--samplesheet FILE` | CSV com metadados por amostra (substitui `--input`) |
-| `--output DIR` | **Obrigatório.** Pasta onde os resultados serão salvos |
+| `--input DIR` | Directory containing paired-end FASTQ files |
+| `--samplesheet FILE` | CSV file with per-sample metadata (replaces `--input`) |
+| `--output DIR` | **Required.** Directory where results will be saved |
 
-### Bancos de dados (todos obrigatórios)
+### Databases (all required)
 
-| Parâmetro | Descrição |
+| Parameter | Description |
 |---|---|
-| `--gambit-db DIR` | Caminho para o banco de dados do GAMBIT |
-| `--bakta-db DIR` | Caminho para o banco de dados do Bakta |
-| `--plasmidfinder-db DIR` | Caminho para o banco de dados do PlasmidFinder |
+| `--gambit-db DIR` | Path to the GAMBIT database |
+| `--bakta-db DIR` | Path to the Bakta database |
+| `--plasmidfinder-db DIR` | Path to the PlasmidFinder database |
 
-### Montagem (*assembly*)
+### Assembly
 
-| Parâmetro | Valores | Padrão | Descrição |
+| Parameter | Values | Default | Description |
 |---|---|---|---|
-| `--assembler` | `spades`, `shovill`, `unicycler` | `spades` | Programa de montagem a ser usado |
-| `--gsize` | ex: `5.0M`, `4500k` | — | Tamanho estimado do genoma (obrigatório para Shovill quando não informado no CSV) |
-| `--memory-spades` | número (GB) | `50` | Memória máxima para o SPAdes |
-| `--ram-shovill` | número (GB) | `50` | RAM máxima para o Shovill |
+| `--assembler` | `spades`, `shovill`, `unicycler` | `spades` | Assembler to use |
+| `--gsize` | e.g. `5.0M`, `4500k` | — | Estimated genome size (required for Shovill when not provided in the CSV) |
+| `--memory-spades` | integer (GB) | `50` | Maximum memory for SPAdes |
+| `--ram-shovill` | integer (GB) | `50` | Maximum RAM for Shovill |
 
-### Qualidade e trimagem
+### Quality and Trimming
 
-| Parâmetro | Valores | Padrão | Descrição |
+| Parameter | Values | Default | Description |
 |---|---|---|---|
-| `--trim` | `yes`, `no` | `no` | Ativar trimagem com Trimmomatic |
-| `--adapters FILE` | caminho para o arquivo | — | Arquivo de adaptadores do Trimmomatic (**obrigatório** se `--trim yes`) |
+| `--trim` | `yes`, `no` | `no` | Enable Trimmomatic trimming |
+| `--adapters FILE` | path to file | — | Trimmomatic adapter file (**required** if `--trim yes`) |
 
-### Informações taxonômicas (opcionais globais)
+### Taxonomic Information (optional global defaults)
 
-| Parâmetro | Valores | Padrão | Descrição |
+| Parameter | Values | Default | Description |
 |---|---|---|---|
-| `--genus` | texto | — | Gênero bacteriano global para todas as amostras |
-| `--species` | texto | — | Espécie bacteriana global para todas as amostras |
-| `--gram` | `+`, `-`, `?` | `?` | Tipo de coloração de Gram |
-| `--genetic-code` | número | `11` | Código genético para o Prokka (11 = bactérias) |
-| `--use-prokka-genus` | `yes`, `no` | `no` | Ativar `--usegenus` no Prokka |
-| `--bakta-complete` | `yes`, `no` | `no` | Informar ao Bakta que o genoma é completo |
+| `--genus` | text | — | Global bacterial genus for all samples |
+| `--species` | text | — | Global bacterial species for all samples |
+| `--gram` | `+`, `-`, `?` | `?` | Gram staining type |
+| `--genetic-code` | integer | `11` | Genetic code for Prokka (11 = bacteria) |
+| `--use-prokka-genus` | `yes`, `no` | `no` | Enable `--usegenus` flag in Prokka |
+| `--bakta-complete` | `yes`, `no` | `no` | Inform Bakta that the genome is complete |
 
-### Ferramentas opcionais
+### Optional Tools
 
-| Parâmetro | Valores | Padrão | Descrição |
+| Parameter | Values | Default | Description |
 |---|---|---|---|
-| `--run-gambit` | `yes`, `no` | `yes` | Executar identificação por GAMBIT |
-| `--run-gtdbtk` | `yes`, `no` | `yes` | Executar classificação por GTDB-Tk |
-| `--run-multiqc` | `yes`, `no` | `yes` | Gerar relatório MultiQC |
+| `--run-gambit` | `yes`, `no` | `yes` | Run GAMBIT taxonomic identification |
+| `--run-gtdbtk` | `yes`, `no` | `yes` | Run GTDB-Tk phylogenomic classification |
+| `--run-multiqc` | `yes`, `no` | `yes` | Generate MultiQC report |
 
-### Ambientes Conda
+### Conda Environments
 
-| Parâmetro | Padrão | Descrição |
+| Parameter | Default | Description |
 |---|---|---|
-| `--conda-env` | `bioinfo` | Nome do ambiente Conda principal |
-| `--gtdbtk-env` | `gtdbtk` | Nome do ambiente Conda do GTDB-Tk |
+| `--conda-env` | `bioinfo` | Name of the main Conda environment |
+| `--gtdbtk-env` | `gtdbtk` | Name of the GTDB-Tk Conda environment |
 
-### Threads (paralelismo)
+### Threads
 
-| Parâmetro | Padrão | Descrição |
+| Parameter | Default | Description |
 |---|---|---|
-| `--threads INT` | — | Define todas as threads de uma vez |
-| `--threads-fastqc INT` | `8` | Threads para o FastQC |
-| `--threads-trimmomatic INT` | `8` | Threads para o Trimmomatic |
-| `--threads-spades INT` | `10` | Threads para o SPAdes |
-| `--threads-shovill INT` | `10` | Threads para o Shovill |
-| `--threads-unicycler INT` | `10` | Threads para o Unicycler |
-| `--threads-quast INT` | `8` | Threads para o QUAST |
-| `--threads-prokka INT` | `8` | Threads para o Prokka |
-| `--threads-bakta INT` | `12` | Threads para o Bakta |
-| `--threads-amrfinder INT` | `8` | Threads para o AMRFinder |
-| `--threads-gtdbtk INT` | `10` | Threads para o GTDB-Tk |
+| `--threads INT` | — | Set all threads at once |
+| `--threads-fastqc INT` | `8` | Threads for FastQC |
+| `--threads-trimmomatic INT` | `8` | Threads for Trimmomatic |
+| `--threads-spades INT` | `10` | Threads for SPAdes |
+| `--threads-shovill INT` | `10` | Threads for Shovill |
+| `--threads-unicycler INT` | `10` | Threads for Unicycler |
+| `--threads-quast INT` | `8` | Threads for QUAST |
+| `--threads-prokka INT` | `8` | Threads for Prokka |
+| `--threads-bakta INT` | `12` | Threads for Bakta |
+| `--threads-amrfinder INT` | `8` | Threads for AMRFinder |
+| `--threads-gtdbtk INT` | `10` | Threads for GTDB-Tk |
 
 ---
 
-## Estrutura dos resultados
+## Output Structure
 
-Após a execução, a pasta de saída (`--output`) terá a seguinte estrutura:
+After execution, the output directory (`--output`) will have the following structure:
 
 ```
-resultados/
-├── pipeline_log.txt                        # Log completo da execução
-├── sample_taxonomy_resolution.tsv          # Resumo da identificação taxonômica por amostra
-├── taxonomic_identification_gambit.tsv     # Resultado do GAMBIT
-├── taxonomic_identification_gtdbtk/        # Resultados do GTDB-Tk
-├── multiqc_output/                         # Relatório HTML consolidado (MultiQC)
-├── Assembly_final/                         # FASTAs finais de todas as amostras
+results/
+├── pipeline_log.txt                        # Full execution log
+├── sample_taxonomy_resolution.tsv          # Per-sample taxonomy summary
+├── taxonomic_identification_gambit.tsv     # GAMBIT results
+├── taxonomic_identification_gtdbtk/        # GTDB-Tk results
+├── multiqc_output/                         # Consolidated HTML report (MultiQC)
+├── Assembly_final/                         # Final FASTA files for all samples
 │   ├── ISO001_spades.fasta
 │   └── ISO002_spades.fasta
-├── ISO001/                                 # Pasta por amostra
-│   ├── ISO001_fastqc/                      # FastQC das reads brutas
-│   ├── ISO001_fastqc_trimmed/              # FastQC após trimagem (se --trim yes)
-│   ├── ISO001_trimmomatic/                 # Reads trimadas
-│   ├── ISO001_spades/                      # Arquivos brutos do SPAdes
-│   ├── ISO001_quast/                       # Estatísticas de montagem
-│   ├── ISO001_spades.tsv                   # Resumo do assembly-scan
-│   ├── ISO001_prokka/                      # Anotação Prokka
-│   ├── ISO001_bakta/                       # Anotação Bakta
-│   ├── ISO001_amrfinder/                   # Genes de resistência (AMRFinder)
-│   └── ISO001_plasmidfinder/               # Plasmídeos identificados
+├── ISO001/                                 # Per-sample directory
+│   ├── ISO001_fastqc/                      # FastQC on raw reads
+│   ├── ISO001_fastqc_trimmed/              # FastQC after trimming (if --trim yes)
+│   ├── ISO001_trimmomatic/                 # Trimmed reads
+│   ├── ISO001_spades/                      # Raw SPAdes output
+│   ├── ISO001_quast/                       # Assembly statistics
+│   ├── ISO001_spades.tsv                   # assembly-scan summary
+│   ├── ISO001_prokka/                      # Prokka annotation
+│   ├── ISO001_bakta/                       # Bakta annotation
+│   ├── ISO001_amrfinder/                   # AMR genes (AMRFinder)
+│   └── ISO001_plasmidfinder/               # Identified plasmids
 └── ISO002/
     └── ...
 ```
 
 ---
 
-## Exemplos de uso
+## Usage Examples
 
-### Exemplo 1 — Análise simples (sem trimagem, SPAdes, todos os padrões)
+### Example 1 — Basic run (no trimming, SPAdes, all defaults)
 
 ```bash
 bash MBGAP_v3_0.sh \
-  --input /dados/fastqs/ \
-  --output /resultados/analise_01/ \
+  --input /data/fastqs/ \
+  --output /results/run_01/ \
   --assembler spades \
   --gambit-db /databases/gambit/ \
   --bakta-db /databases/bakta/ \
   --plasmidfinder-db /databases/plasmidfinder/
 ```
 
-### Exemplo 2 — Com trimagem e genus/species globais
+### Example 2 — With trimming and global genus/species
 
 ```bash
 bash MBGAP_v3_0.sh \
-  --input /dados/fastqs/ \
-  --output /resultados/analise_02/ \
+  --input /data/fastqs/ \
+  --output /results/run_02/ \
   --assembler spades \
   --trim yes \
   --adapters /databases/TruSeq3-PE.fa \
@@ -280,12 +276,12 @@ bash MBGAP_v3_0.sh \
   --plasmidfinder-db /databases/plasmidfinder/
 ```
 
-### Exemplo 3 — Samplesheet com Shovill e 20 threads
+### Example 3 — Samplesheet with Shovill and 20 threads
 
 ```bash
 bash MBGAP_v3_0.sh \
-  --samplesheet /dados/minhas_amostras.csv \
-  --output /resultados/analise_03/ \
+  --samplesheet /data/my_samples.csv \
+  --output /results/run_03/ \
   --assembler shovill \
   --threads 20 \
   --gambit-db /databases/gambit/ \
@@ -293,12 +289,12 @@ bash MBGAP_v3_0.sh \
   --plasmidfinder-db /databases/plasmidfinder/
 ```
 
-### Exemplo 4 — Sem GTDB-Tk (mais rápido, sem o banco GTDB)
+### Example 4 — Without GTDB-Tk (faster, no GTDB reference data needed)
 
 ```bash
 bash MBGAP_v3_0.sh \
-  --samplesheet /dados/amostras.csv \
-  --output /resultados/analise_04/ \
+  --samplesheet /data/samples.csv \
+  --output /results/run_04/ \
   --assembler spades \
   --run-gtdbtk no \
   --gambit-db /databases/gambit/ \
@@ -308,39 +304,39 @@ bash MBGAP_v3_0.sh \
 
 ---
 
-## Retomada automática (*checkpoints*)
+## Automatic Checkpoint and Resume
 
-O MBGAP salva o progresso de cada etapa. Se a execução for interrompida (queda de energia, erro, etc.), basta rodar o mesmo comando novamente — as etapas já concluídas serão puladas automaticamente.
+MBGAP saves the progress of each step. If execution is interrupted (power failure, error, etc.), simply run the same command again — already completed steps will be skipped automatically.
 
-Os arquivos de checkpoint ficam em `OUTPUT_DIR/.checkpoints/`.
-
----
-
-## Resolução de problemas comuns
-
-**Erro: `Dependência não encontrada no PATH: fastqc`**  
-→ O ambiente Conda não está ativado ou a ferramenta não foi instalada. Verifique com `conda activate bioinfo` e depois `which fastqc`.
-
-**Erro: `Não foi possível ativar o ambiente conda: bioinfo`**  
-→ O nome do seu ambiente é diferente. Verifique com `conda env list` e use `--conda-env NOME_DO_SEU_AMBIENTE`.
-
-**Erro: `gsize ausente para amostra X usando Shovill`**  
-→ Ao usar `--assembler shovill`, é obrigatório informar o tamanho estimado do genoma. Adicione a coluna `gsize` no CSV ou use `--gsize 5.0M`.
-
-**Erro: `--adapters é obrigatório quando --trim yes`**  
-→ Forneça o caminho para o arquivo de adaptadores Illumina com `--adapters /caminho/TruSeq3-PE.fa`.
-
-**Erro: `Amostra duplicada detectada`**  
-→ Dois arquivos FASTQ geraram o mesmo nome de amostra ou há linhas duplicadas no CSV.
-
-**O pipeline está lento**  
-→ Aumente o número de threads com `--threads 16` (ou mais, conforme seu servidor) e, se necessário, aumente `--memory-spades` e `--ram-shovill`.
+Checkpoint files are stored in `OUTPUT_DIR/.checkpoints/`.
 
 ---
 
-## Citação / Créditos
+## Troubleshooting
 
-Se você utilizar o MBGAP em publicações científicas, por favor cite o repositório e as ferramentas individuais utilizadas:
+**Error: `Dependency not found in PATH: fastqc`**  
+→ The Conda environment is not active or the tool was not installed. Check with `conda activate bioinfo` and then `which fastqc`.
+
+**Error: `Could not activate conda environment: bioinfo`**  
+→ Your environment has a different name. Check with `conda env list` and use `--conda-env YOUR_ENV_NAME`.
+
+**Error: `gsize missing for sample X using Shovill`**  
+→ When using `--assembler shovill`, the estimated genome size is required. Add the `gsize` column to your CSV or use `--gsize 5.0M`.
+
+**Error: `--adapters is required when --trim yes`**  
+→ Provide the path to your Illumina adapter file with `--adapters /path/to/TruSeq3-PE.fa`.
+
+**Error: `Duplicate sample detected`**  
+→ Two FASTQ files produced the same sample name, or there are duplicate rows in the CSV.
+
+**The pipeline is running slowly**  
+→ Increase the number of threads with `--threads 16` (or more, depending on your server) and, if needed, increase `--memory-spades` and `--ram-shovill`.
+
+---
+
+## Citation
+
+If you use MBGAP in a scientific publication, please cite this repository and the individual tools used:
 
 - **SPAdes:** Bankevich et al., 2012 — *J Comput Biol*
 - **Shovill:** [github.com/tseemann/shovill](https://github.com/tseemann/shovill)
@@ -358,11 +354,11 @@ Se você utilizar o MBGAP em publicações científicas, por favor cite o reposi
 
 ---
 
-## Licença
+## License
 
-Este projeto está disponível para uso acadêmico e científico.  
-Desenvolvido no **Laboratório de Vigilância Genômica — LACEN-AL**.
+This project is licensed under the [MIT License](./LICENSE).  
+Developed at the **Laboratório de Vigilância Genômica — LACEN-AL**.
 
 ---
 
-*Dúvidas ou sugestões? Abra uma [issue](../../issues) neste repositório.*
+*Questions or suggestions? Open an [issue](../../issues) in this repository.*
