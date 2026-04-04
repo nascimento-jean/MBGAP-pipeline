@@ -754,9 +754,7 @@ make_prokka_fasta() {
         'BEGIN{n=0} /^>/{n++; printf ">%s_contig_%05d\n", prefix, n; next} {print}' \
         "$fasta" > "$fasta_clean"
 
-    echo
-
-    log "Prokka: contigs renomeados em $(basename "$fasta_clean") (IDs ≤37 chars)" >&2 || true
+    log "Prokka: contigs renomeados em $(basename "$fasta_clean") (IDs ≤37 chars)"
     echo "$fasta_clean"
 }
 
